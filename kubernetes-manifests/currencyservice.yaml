@@ -28,33 +28,45 @@ spec:
       serviceAccountName: default
       terminationGracePeriodSeconds: 5
       containers:
-      - name: server
-        image: currencyservice
-        ports:
-        - name: grpc
-          containerPort: 7000
-        env:
-        - name: PORT
-          value: "7000"
-        # - name: DISABLE_TRACING
-        #   value: "1"
-        # - name: DISABLE_PROFILER
-        #   value: "1"
-        # - name: DISABLE_DEBUGGER
-        #   value: "1"
-        readinessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7000"]
-        livenessProbe:
-          exec:
-            command: ["/bin/grpc_health_probe", "-addr=:7000"]
-        resources:
-          requests:
-            cpu: 100m
-            memory: 64Mi
-          limits:
-            cpu: 200m
-            memory: 128Mi
+        - name: server
+          image: currencyservice
+          env:
+            - name: PORT
+              value: "3080"
+            - name: DISABLE_TRACING
+              value: "1"
+            - name: DISABLE_PROFILER
+              value: "1"
+            - name: DISABLE_DEBUGGER
+              value: "1"
+          readinessProbe:
+            initialDelaySeconds: 10
+            httpGet:
+              path: "/_healthz"
+              port: 3080
+              httpHeaders:
+                - name: "Cookie"
+                  value: "shop_session-id=x-liveness-probe"
+
+          livenessProbe:
+            initialDelaySeconds: 10
+            httpGet:
+              path: "/_healthz"
+              port: 3080
+              httpHeaders:
+                - name: "Cookie"
+                  value: "shop_session-id=x-liveness-probe"
+
+          # livenessProbe:
+          #   exec:
+          #     command: ["/bin/grpc_health_probe", "-addr=:7000"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
 ---
 apiVersion: v1
 kind: Service
@@ -65,6 +77,6 @@ spec:
   selector:
     app: currencyservice
   ports:
-  - name: grpc
-    port: 7000
-    targetPort: 7000
+    - name: grpc
+      port: 7000
+      targetPort: 7000

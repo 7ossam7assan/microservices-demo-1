@@ -65,12 +65,20 @@ function _carry(amount) {
  */
 async function convert(from, to_code) {
   logger.info("querying API");
+  let url = "";
+
+  // Slow down by a random value between 1000 and 2000ms when converting to GBP
+  if (to_code === "GBP") {
+    const delay = Math.floor(Math.random() * 2000) + 1000;
+    logger.info(`Slowing down request by ${delay}`);
+    url = `http://slowwly.robertomurray.co.uk/delay/${delay}/url/${exchangerateAPI}/latest?base=${from.currency_code}&symbols=${to_code}`;
+  } else {
+    url = `${exchangerateAPI}/latest?base=${from.currency_code}&symbols=${to_code}`;
+  }
 
   // On purpose not promise all - but could be a showcase for
   // serial vs perallel
-  const currencyAPIResult = await axios.get(
-    `${exchangerateAPI}/latest?base=${from.currency_code}&symbols=${to_code}`
-  );
+  const currencyAPIResult = await axios.get(url);
 
   const factor = currencyAPIResult.data.rates[to_code];
 

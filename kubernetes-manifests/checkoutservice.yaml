@@ -49,7 +49,7 @@ spec:
             - name: EMAIL_SERVICE_ADDR
               value: "emailservice:5000"
             - name: CURRENCY_SERVICE_ADDR
-              value: "currencyservice:3080"
+              value: "currencyserviceproxy:7000"
             - name: CART_SERVICE_ADDR
               value: "cartservice:7070"
           # - name: DISABLE_STATS

@@ -42,8 +42,9 @@ spec:
               value: "1"
             - name: DISABLE_DEBUGGER
               value: "1"
-            - name: CURRENCY_THIRD_PARTY_ADDRESS
-              value: "http://localhost:3080"
+            # This needs to be changed to an external service eventually
+            - name: EXT_CURRENCY_SERVICE_ADDR
+              value: "currencyservice:3080"
           readinessProbe:
             exec:
               command: ["/bin/grpc_health_probe", "-addr=:7000"]

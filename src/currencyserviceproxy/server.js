@@ -48,6 +48,8 @@ if (process.env.DISABLE_DEBUGGER) {
 const path = require("path");
 const grpc = require("grpc");
 const pino = require("pino");
+const axios = require("axios");
+const currencyEndpoint = `http://${process.env.EXT_CURRENCY_SERVICE_ADDR}`;
 const protoLoader = require("@grpc/proto-loader");
 
 const MAIN_PROTO_PATH = path.join(__dirname, "./proto/demo.proto");
@@ -83,15 +85,6 @@ function _loadProto(path) {
 }
 
 /**
- * Helper function that gets currency data from a stored JSON file
- * Uses public data from European Central Bank
- */
-function _getCurrencyData(callback) {
-  const data = require("./data/currency_conversion.json");
-  callback(data);
-}
-
-/**
  * Helper function that handles decimal/fractional carrying
  */
 function _carry(amount) {
@@ -106,47 +99,43 @@ function _carry(amount) {
 /**
  * Lists the supported currencies
  */
-function getSupportedCurrencies(call, callback) {
-  logger.info("Getting supported currencies...");
-  _getCurrencyData((data) => {
-    callback(null, { currency_codes: Object.keys(data) });
-  });
+async function getSupportedCurrencies(call, callback) {
+  try {
+    logger.info("Getting supported currencies...");
+    const supportedRequestResult = await axios.get(
+      `${currencyEndpoint}/supported`
+    );
+    return callback(null, { currency_codes: supportedRequestResult.data });
+  } catch (err) {
+    logger.error(`Supported currency request failed: ${err}`);
+    // Be a bit resillient and move on even if the service is down
+    return callback(null, { currency_codes: [] });
+  }
 }
 
 /**
  * Converts between currencies
  */
-function convert(call, callback) {
+async function convert(call, callback) {
   logger.info("received conversion request");
+
   try {
-    _getCurrencyData((data) => {
-      const request = call.request;
+    const request = call.request;
 
-      // Convert: from_currency --> EUR
-      const from = request.from;
-      const euros = _carry({
-        units: from.units / data[from.currency_code],
-        nanos: from.nanos / data[from.currency_code],
-      });
+    logger.info("Making conversion request...");
+    const conversionRequestResult = await axios.post(
+      `${currencyEndpoint}/convert`,
+      { from: request.from, to: request.to_code }
+    );
 
-      euros.nanos = Math.round(euros.nanos);
+    const data = conversionRequestResult.data;
 
-      // Convert: EUR --> to_currency
-      const result = _carry({
-        units: euros.units * data[request.to_code],
-        nanos: euros.nanos * data[request.to_code],
-      });
-
-      result.units = Math.floor(result.units);
-      result.nanos = Math.floor(result.nanos);
-      result.currency_code = request.to_code;
-
-      logger.info(`conversion request successful`);
-      callback(null, result);
-    });
+    logger.info(`conversion request successful`);
+    callback(null, data);
   } catch (err) {
+    // Return the initial value instead of failing completely here
     logger.error(`conversion request failed: ${err}`);
-    callback(err.message);
+    callback(null, call.request.from);
   }
 }
 

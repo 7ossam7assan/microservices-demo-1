@@ -77,6 +77,6 @@ spec:
   selector:
     app: currencyservice
   ports:
-    - name: grpc
-      port: 7000
-      targetPort: 7000
+    - name: http
+      port: 3080
+      targetPort: 3080

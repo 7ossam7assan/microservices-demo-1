@@ -14,42 +14,18 @@
  * limitations under the License.
  */
 
-if (process.env.DISABLE_PROFILER) {
-  console.log("Profiler disabled.");
-} else {
-  console.log("Profiler enabled.");
-  require("@google-cloud/profiler").start({
-    serviceContext: {
-      service: "currencyservice",
-      version: "1.0.0",
-    },
-  });
-}
-
-if (process.env.DISABLE_TRACING) {
-  console.log("Tracing disabled.");
-} else {
-  console.log("Tracing enabled.");
-  require("@google-cloud/trace-agent").start();
-}
-
-if (process.env.DISABLE_DEBUGGER) {
-  console.log("Debugger disabled.");
-} else {
-  console.log("Debugger enabled.");
-  require("@google-cloud/debug-agent").start({
-    serviceContext: {
-      service: "currencyservice",
-      version: "VERSION",
-    },
-  });
-}
 const express = require("express");
+const bodyParser = require("body-parser");
+
 const path = require("path");
 const grpc = require("grpc");
 const pino = require("pino");
+const axios = require("axios");
 
 const PORT = process.env.PORT;
+
+const supportedCurrencies = require("./data/supportedCurrencies.json");
+const exchangerateAPI = "https://api.exchangeratesapi.io";
 
 const logger = pino({
   name: "currencyservice-server",
@@ -59,6 +35,7 @@ const logger = pino({
 });
 
 const app = express();
+app.use(bodyParser.json());
 
 /**
  * Helper function that gets currency data from a stored JSON file
@@ -82,54 +59,50 @@ function _carry(amount) {
 }
 
 /**
- * Lists the supported currencies
- */
-function getSupportedCurrencies(call, callback) {
-  logger.info("Getting supported currencies...");
-  _getCurrencyData((data) => {
-    callback(null, { currency_codes: Object.keys(data) });
-  });
-}
-
-/**
  * Converts between currencies
  */
-function convert(call, callback) {
-  logger.info("received conversion request");
-  try {
-    _getCurrencyData((data) => {
-      const request = call.request;
+async function convert(from, to_code) {
+  logger.info("querying API");
 
-      // Convert: from_currency --> EUR
-      const from = request.from;
-      const euros = _carry({
-        units: from.units / data[from.currency_code],
-        nanos: from.nanos / data[from.currency_code],
-      });
+  // On purpose not promise all - but could be a showcase for
+  // serial vs perallel
+  const currencyAPIResult = await axios.get(
+    `${exchangerateAPI}/latest?base=${from.currency_code}&symbols=${to_code}`
+  );
 
-      euros.nanos = Math.round(euros.nanos);
+  const factor = currencyAPIResult.data.rates[to_code];
 
-      // Convert: EUR --> to_currency
-      const result = _carry({
-        units: euros.units * data[request.to_code],
-        nanos: euros.nanos * data[request.to_code],
-      });
+  // Convert: EUR --> to_currency
+  const result = _carry({
+    units: from.units * factor,
+    nanos: from.nanos * factor,
+  });
 
-      result.units = Math.floor(result.units);
-      result.nanos = Math.floor(result.nanos);
-      result.currency_code = request.to_code;
+  result.units = Math.floor(result.units);
+  result.nanos = Math.floor(result.nanos);
+  result.currency_code = to_code;
 
-      logger.info(`conversion request successful`);
-      callback(null, result);
-    });
-  } catch (err) {
-    logger.error(`conversion request failed: ${err}`);
-    callback(err.message);
-  }
+  logger.info(`conversion request successful`);
+  return result;
 }
 
 app.get("/_healthz", (req, res, next) => {
   res.send("SERVING");
+});
+
+app.post("/convert", async (req, res, next) => {
+  try {
+    logger.info("received conversion request");
+    const { from, to } = req.body;
+    const result = await convert(from, to);
+    return res.json(result);
+  } catch (err) {
+    logger.error(`conversion request failed: ${err}`);
+  }
+});
+
+app.get("/supported", async (req, res, next) => {
+  return res.json(supportedCurrencies);
 });
 
 app.listen(PORT, () => {

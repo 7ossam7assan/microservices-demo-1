@@ -34,8 +34,8 @@ build:
       context: src/paymentservice
     - image: currencyserviceproxy
       context: src/currencyserviceproxy
-    - image: currencyservice
-      context: src/currencyservice
+    # - image: currencyservice
+    #  context: src/currencyservice
     - image: cartservice
       context: src/cartservice
     - image: frontend

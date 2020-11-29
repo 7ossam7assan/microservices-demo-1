@@ -8,7 +8,7 @@ const {
 } = require("@opentelemetry/tracing");
 
 // To test export to jaeger
-// const { JaegerExporter } = require("@opentelemetry/exporter-jaeger");
+const { JaegerExporter } = require("@opentelemetry/exporter-jaeger");
 const { CollectorTraceExporter } = require("@opentelemetry/exporter-collector");
 
 const EXPORTER = process.env.EXPORTER || "";
@@ -16,14 +16,16 @@ const EXPORTER = process.env.EXPORTER || "";
 module.exports = (serviceName) => {
   const provider = new NodeTracerProvider();
 
-  /* To use jaeger
-    const jaegerExporter = new JaegerExporter({
-      serviceName,
-    });
-    provider.addSpanProcessor(new SimpleSpanProcessor(jaegerExporter));
+  /*
+  // Enable jaeger exporter
+  const jaegerExporter = new JaegerExporter({
+    serviceName,
+  });
+  provider.addSpanProcessor(new SimpleSpanProcessor(jaegerExporter));
   */
 
-  /* to use the collector exporter
+  /*
+  // Enable collector exporter
   const collectorExporter = new CollectorTraceExporter({
     serviceName,
     // logger: new ConsoleLogger(LogLevel.DEBUG),

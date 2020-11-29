@@ -92,6 +92,17 @@ app.get("/_healthz", (req, res, next) => {
   res.send("SERVING");
 });
 
+/*
+// Test payload for POST /convert:
+{
+    "from": {
+        "currency_code": "USD",
+        "units": 65,
+        "nanos": 500000000
+    },
+    "to": "EUR"
+}
+*/
 app.post("/convert", async (req, res, next) => {
   try {
     logger.info("received conversion request");

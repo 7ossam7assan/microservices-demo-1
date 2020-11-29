@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+const tracer = require("./tracing")("currencyservice");
+
 const express = require("express");
 const bodyParser = require("body-parser");
 

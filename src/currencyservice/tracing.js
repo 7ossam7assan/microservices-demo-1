@@ -9,7 +9,22 @@ const {
 
 // To test export to jaeger
 const { JaegerExporter } = require("@opentelemetry/exporter-jaeger");
+
+// JSON over HTTP
+// https://github.com/open-telemetry/opentelemetry-js/tree/master/packages/opentelemetry-exporter-collector
 const { CollectorTraceExporter } = require("@opentelemetry/exporter-collector");
+
+// GRPC Collector protocol
+// https://github.com/open-telemetry/opentelemetry-js/tree/master/packages/opentelemetry-exporter-collector-grpc
+const {
+  CollectorTraceExporterGrpc,
+} = require("@opentelemetry/exporter-collector-grpc");
+
+// Protobuf Collector Protocol
+// https://github.com/open-telemetry/opentelemetry-js/tree/master/packages/opentelemetry-exporter-collector-proto
+const {
+  CollectorTraceExporterProto,
+} = require("@opentelemetry/exporter-collector-proto");
 
 const EXPORTER = process.env.EXPORTER || "";
 
